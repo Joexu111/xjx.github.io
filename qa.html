@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>在线刷题系统</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background-color: #f0f2f5;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .question-header {
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #eee;
+      }
+
+      .question-number {
+        color: #666;
+        font-size: 0.9em;
+      }
+
+      .question-text {
+        font-size: 1.2em;
+        margin: 15px 0;
+        line-height: 1.6;
+      }
+
+      .options {
+        margin: 20px 0;
+      }
+
+      .option {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        background: #fff;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: #333;
+      }
+
+      .option:hover {
+        background: #f8f9fa;
+      }
+
+      /* 修改后的错误选项样式 */
+      .option.wrong {
+        background: #f8d7da;
+        border-color: #dc3545 !important; /* 红色边框 */
+        position: relative;
+      }
+
+      /* 添加错误图标（可选） */
+      .option.wrong::after {
+        content: '✕';
+        color: #dc3545;
+        position: absolute;
+        right: 15px;
+        font-weight: bold;
+      }
+
+      /* 正确答案样式保持绿色 */
+      .option.correct {
+        background: #d4edda;
+        border-color: #28a745 !important;
+      }
+
+      .navigation {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background: #007bff;
+        color: white;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      .progress {
+        margin-top: 20px;
+        color: #666;
+      }
+
+      @media (max-width: 480px) {
+        body {
+          padding: 10px;
+        }
+
+        .container {
+          padding: 15px;
+        }
+
+        .question-text {
+          font-size: 1.1em;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="question-header">
+        <div class="question-number">
+          题目 <span id="current">1</span>/<span id="total">50</span>
+        </div>
+        <div class="question-text" id="question"></div>
+      </div>
+      <div class="options" id="options"></div>
+      <div class="navigation">
+        <button onclick="prevQuestion()">上一题</button>
+        <button onclick="nextQuestion()">下一题</button>
+        <input
+          type="number"
+          id="jumpTo"
+          min="1"
+          style="width: 80px; padding: 5px"
+        />
+        <button onclick="jumpToQuestion()">跳转</button>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+    <script src="./questions.js"></script>
+    <script>
+      let currentQuestion = localStorage.getItem('currentQuestion') || 0;
+      currentQuestion = Number(currentQuestion);
+      console.log('currentQuestion', currentQuestion);
+      function showQuestion() {
+        localStorage.setItem('currentQuestion', currentQuestion)
+        const q = questions[currentQuestion];
+        document.getElementById('current').textContent = currentQuestion + 1;
+        document.getElementById('total').textContent = questions.length;
+        document.getElementById('question').textContent = q.question;
+
+        const optionsDiv = document.getElementById('options');
+        optionsDiv.innerHTML = '';
+
+        q.options.forEach((option, index) => {
+          const button = document.createElement('button');
+          button.className = 'option';
+          button.textContent = `${String.fromCharCode(65 + index)}. ${option}`;
+          button.onclick = () => checkAnswer(index);
+          optionsDiv.appendChild(button);
+        });
+
+        updateProgress();
+      }
+
+      function checkAnswer(selectedIndex) {
+        const correctEnum = { A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6 };
+        const correctIndex =
+          correctEnum[questions[currentQuestion].answer];
+        const options = document.getElementsByClassName('option');
+
+        // 清除所有选项的样式（新增）
+        Array.from(options).forEach((opt) => {
+          opt.classList.remove('correct', 'wrong');
+        });
+
+        // 标记用户选择的选项
+        options[selectedIndex].classList.add(
+          selectedIndex === correctIndex ? 'correct' : 'wrong' // 修正拼写错误
+        );
+
+        // 如果答错，同时显示正确答案（新增红色边框）
+        if (selectedIndex !== correctIndex) {
+          options[correctIndex].classList.add('correct');
+          // 添加红色边框到错误选项（新增样式）
+          options[selectedIndex].style.border = '2px solid #dc3545';
+        }
+      }
+
+      function prevQuestion() {
+        if (currentQuestion > 0) {
+          currentQuestion--;
+          showQuestion();
+        }
+      }
+
+      function nextQuestion() {
+        if (currentQuestion < questions.length - 1) {
+          currentQuestion++;
+          showQuestion();
+        }
+      }
+
+      function jumpToQuestion() {
+        const num = parseInt(document.getElementById('jumpTo').value);
+        if (num >= 1 && num <= questions.length) {
+          currentQuestion = num - 1;
+          showQuestion();
+        }
+      }
+
+      function updateProgress() {
+        const progress = document.getElementById('progress');
+        progress.textContent = `当前进度：${Math.round(
+          ((currentQuestion + 1) / questions.length) * 100
+        )}%`;
+      }
+
+      // 初始化
+      showQuestion();
+    </script>
+  </body>
+</html>
